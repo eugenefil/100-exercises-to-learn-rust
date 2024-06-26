@@ -11,10 +11,29 @@ use ticket_fields::{TicketDescription, TicketTitle};
 #[derive(Clone)]
 pub struct TicketStore {
     tickets: Vec<Ticket>,
+    next_id: TicketId,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TicketId(u64);
+
+impl TicketId {
+    fn new() -> Self {
+        Self(0)
+    }
+
+    fn inc(&mut self) {
+        self.0 += 1;
+    }
+}
+
+impl std::convert::TryInto<usize> for TicketId {
+    type Error = std::num::TryFromIntError;
+
+    fn try_into(self) -> Result<usize, Self::Error> {
+        usize::try_from(self.0)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Ticket {
@@ -41,11 +60,24 @@ impl TicketStore {
     pub fn new() -> Self {
         Self {
             tickets: Vec::new(),
+            next_id: TicketId::new(),
         }
     }
 
-    pub fn add_ticket(&mut self, ticket: Ticket) {
-        self.tickets.push(ticket);
+    pub fn add_ticket(&mut self, ticket: TicketDraft) -> TicketId {
+        let id = self.next_id;
+        self.tickets.push(Ticket {
+            id: id,
+            title: ticket.title,
+            description: ticket.description,
+            status: Status::ToDo,
+        });
+        self.next_id.inc();
+        id
+    }
+
+    pub fn get(&self, id: TicketId) -> Option<&Ticket> {
+        self.tickets.get::<usize>(id.try_into().unwrap())
     }
 }
 
